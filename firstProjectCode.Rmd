@@ -1,0 +1,84 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+First, let's look at the different variables, compute new relevant ones and tidy up.
+
+
+The proportion of each group in the dataset, in a table and then barchart. This part will 
+focus on each varialbe individually, and specifically categorial data. 
+```{r}
+dataset$Type %>% table
+ggplot(dataset) + geom_bar(aes(x = Type))
+
+dataset$Gender %>% table
+ggplot(dataset) + geom_bar(aes(x = Gender))
+
+dataset$Breed1 %>% table
+ggplot(dataset) + geom_bar(aes(x = Breed1))
+
+dataset$Color1 %>% table
+ggplot(dataset) + geom_bar(aes(x = Color1))
+
+dataset$MaturitySize %>% table
+ggplot(dataset) + geom_bar(aes(x = MaturitySize))
+
+dataset$FurLength %>% table
+ggplot(dataset) + geom_bar(aes(x = FurLength))
+
+dataset$Vaccinated %>% table
+ggplot(dataset) + geom_bar(aes(x = Vaccinated))
+
+dataset$Dewormed %>% table
+ggplot(dataset) + geom_bar(aes(x = Dewormed))
+
+dataset$Sterilized %>% table
+ggplot(dataset) + geom_bar(aes(x = Sterilized))
+
+dataset$Health %>% table
+ggplot(dataset) + geom_bar(aes(x = Health))
+
+dataset$State %>% table
+ggplot(dataset) + geom_bar(aes(x = State))
+
+dataset$y %>% table
+ggplot(dataset) + geom_bar(aes(x = y)) # Almost no cases of 0. We need to take this into consideration when we split into Train and Validation
+```
+
+Now the numeric variables. I'm not sure it's really good to show these with Histograms, as they are integers, but whatever. It gives the general idea.
+```{r}
+hist(dataset$Age,prob=T, main='Age',xlab = 'Age',col="grey")
+lines(density(dataset$Age),col="blue",lwd=2) # Some of the outliers here are disturbing. We will remove them and create this again later
+
+hist(dataset$Quantity,prob=TRUE, main='Quantity',xlab = 'Quantity',col="grey")
+lines(density(dataset$Quantity),col="blue",lwd=2) #Same here. let's see exactly how many we have above 8
+
+dataset[Quantity > 8, .N,] # only 49, out of 7684. We'll need to decide what to do with these profiles. 
+
+hist(dataset$Fee,prob=TRUE, main='Fee',xlab = 'Fee',col="grey")
+lines(density(dataset$Fee),col="blue",lwd=2) # This is also problematic. Most are zeroes and then disperesed. We'll probably be best to create a binary variable indicating a fee existed
+
+hist(dataset$VideoAmt,prob=T, main='Amount of Videos',xlab = 'Videos',col="grey")
+lines(density(dataset$VideoAmt),col="blue",lwd=2) #Also here, most profiles have 0 videos. Might be better as a binary variable indicating the existent of videos 
+
+dataset[VideoAmt == 0 , .N/7684,] # 96.3% of pets in the dataset have 0 videos in their profiles. 
+
+hist(dataset$PhotoAmt,prob=TRUE, main='Amount of Photos',xlab = 'Videos',col="grey")
+lines(density(dataset$PhotoAmt),col="blue",lwd=2) #This is more interesting. Seems like you usually have 1 picture, but it is rather common to have more. 
+```
+
+Time for some boxplots. Let's see how valuable are our numeric variables
+```{r}
+boxplot(dataset$Age~dataset$y) # Not extremely helpful. The "not adopted" category is slightly older, but not enough. 
+
+boxplot(dataset$Quantity~dataset$y) #This is a bad variable, so obviously it is also bad here. In general it seems people are less inclined to adopt pets in groups, which makes sense. 
+
+boxplot(dataset$Fee~dataset$y) # Really not helpful. Again, we will turn this into a binary variable and see if that makes a difference. 
+
+boxplot(dataset$VideoAmt~dataset$y) #Same as Fee. 
+
+boxplot(dataset$PhotoAmt~dataset$y) # It seems more photos are slightly helpful for increasing the odds for adoption, but only slightly. 
+```
+
+
