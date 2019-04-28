@@ -5,7 +5,6 @@ editor_options:
 ---
 First, let's look at the different variables, compute new relevant ones and tidy up.
 
-
 The proportion of each group in the dataset, in a table and then barchart. This part will 
 focus on each varialbe individually, and specifically categorial data. 
 ```{r}
@@ -59,6 +58,8 @@ dataset[Quantity > 8, .N,] # only 49, out of 7684. We'll need to decide what to 
 hist(dataset$Fee,prob=TRUE, main='Fee',xlab = 'Fee',col="grey")
 lines(density(dataset$Fee),col="blue",lwd=2) # This is also problematic. Most are zeroes and then disperesed. We'll probably be best to create a binary variable indicating a fee existed
 
+dataset[Fee == 0 , .N/7684,] # 84.1% of pets in the dataset Don't have adoption fees.
+
 hist(dataset$VideoAmt,prob=T, main='Amount of Videos',xlab = 'Videos',col="grey")
 lines(density(dataset$VideoAmt),col="blue",lwd=2) #Also here, most profiles have 0 videos. Might be better as a binary variable indicating the existent of videos 
 
@@ -79,6 +80,28 @@ boxplot(dataset$Fee~dataset$y) # Really not helpful. Again, we will turn this in
 boxplot(dataset$VideoAmt~dataset$y) #Same as Fee. 
 
 boxplot(dataset$PhotoAmt~dataset$y) # It seems more photos are slightly helpful for increasing the odds for adoption, but only slightly. 
+```
+
+Let's make sure we only have NA on secondary variables
+```{r}
+cleandata %>% names
+cleandata <- dataset
+cleandata [is.na(Type),.N] # I ran this line of code 20 times, for each variable manually, because I couldn't figure out how to do it more efficiantly. 
+```
+
+Indeed that is the case, so we can replace every NA with 0
+```{r}
+# Again, couldn't figure out a better way. I go through each column and change only the NA with 0. 
+for (i in names(cleandata)) {
+  cleandata[is.na(get(i)), (i):=0] 
+} 
+```
+
+Creating the new variables from Variables that are currently extremely odd shaped and unhelpful
+```{r}
+cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
+
+cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
 ```
 
 
