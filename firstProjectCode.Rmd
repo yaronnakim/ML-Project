@@ -8,41 +8,42 @@ First, let's look at the different variables, compute new relevant ones and tidy
 The proportion of each group in the dataset, in a table and then barchart. This part will 
 focus on each varialbe individually, and specifically categorial data. 
 ```{r}
-dataset$Type %>% table
-ggplot(dataset) + geom_bar(aes(x = Type))
+dataset$Type %>% table %>% prop.table()
+ggplot(dataset, aes(Type)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Gender %>% table
-ggplot(dataset) + geom_bar(aes(x = Gender))
+dataset$Gender %>% table %>% prop.table()
+ggplot(dataset, aes(Gender)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Breed1 %>% table
-ggplot(dataset) + geom_bar(aes(x = Breed1))
+dataset$Breed1 %>% table %>% prop.table()
+ggplot(dataset, aes(Breed1)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Color1 %>% table
-ggplot(dataset) + geom_bar(aes(x = Color1))
+dataset$Color1 %>% table %>% prop.table()
+ggplot(dataset, aes(Color1)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$MaturitySize %>% table
-ggplot(dataset) + geom_bar(aes(x = MaturitySize))
+dataset$MaturitySize %>% table %>% prop.table()
+ggplot(dataset, aes(MaturitySize)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$FurLength %>% table
-ggplot(dataset) + geom_bar(aes(x = FurLength))
+dataset$FurLength %>% table %>% prop.table()
+ggplot(dataset, aes(FurLength)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Vaccinated %>% table
-ggplot(dataset) + geom_bar(aes(x = Vaccinated))
+dataset$Vaccinated %>% table %>% prop.table()
+ggplot(dataset, aes(Vaccinated)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Dewormed %>% table
-ggplot(dataset) + geom_bar(aes(x = Dewormed))
+dataset$Dewormed %>% table %>% prop.table()
+ggplot(dataset, aes(Dewormed)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Sterilized %>% table
-ggplot(dataset) + geom_bar(aes(x = Sterilized))
+dataset$Sterilized %>% table %>% prop.table()
+ggplot(dataset, aes(Sterilized)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$Health %>% table
-ggplot(dataset) + geom_bar(aes(x = Health))
+dataset$Health %>% table %>% prop.table()
+ggplot(dataset, aes(Health)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$State %>% table
-ggplot(dataset) + geom_bar(aes(x = State))
+dataset$State %>% table %>% prop.table()
+ggplot(dataset, aes(State)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
-dataset$y %>% table
-ggplot(dataset) + geom_bar(aes(x = y)) # Almost no cases of 0. We need to take this into consideration when we split into Train and Validation
+dataset$y %>% table %>% prop.table()
+ggplot(dataset, aes(y)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')  # Almost no cases of 0. We need to take this into consideration when we split into Train and Validation
+
 ```
 
 Now the numeric variables. I'm not sure it's really good to show these with Histograms, as they are integers, but whatever. It gives the general idea.
@@ -102,6 +103,17 @@ Creating the new variables from Variables that are currently extremely odd shape
 cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
 
 cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
+```
+
+Connections/correlation between variables
+```{r}
+ggplot(cleandata, aes(y, colour = y)) +  geom_bar()  + ylab('Proportion') + facet_grid(vars(HasFee)) 
+
+cleandata %>% names
+
+mosaicplot(table(cleandata$y,cleandata$Vaccinated), color = T)
+mosaicplot(table(cleandata$Sterilized,cleandata$y), color = T)
+
 ```
 
 
