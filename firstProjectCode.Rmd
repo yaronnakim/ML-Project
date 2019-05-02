@@ -19,6 +19,8 @@ ggplot(dataset, aes(Breed1)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + 
 
 dataset$Color1 %>% table %>% prop.table()
 ggplot(dataset, aes(Color1)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
+ggplot(dataset, aes(Color2)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
+ggplot(dataset, aes(Color3)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
 dataset$MaturitySize %>% table %>% prop.table()
 ggplot(dataset, aes(MaturitySize)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
@@ -55,19 +57,39 @@ hist(dataset$Quantity,prob=TRUE, main='Quantity',xlab = 'Quantity',col="grey")
 lines(density(dataset$Quantity),col="blue",lwd=2) #Same here. let's see exactly how many we have above 8
 
 dataset[Quantity > 8, .N,] # only 49, out of 7684. We'll need to decide what to do with these profiles. 
+dataset[Quantity == 1, .N/7684,] # i think we shuld focus on the pets that not in groups and do the prediction on them.
+dataset[Quantity > 1 & dataset$y > 1, .N/7684,] #test to see how much goupe pets DONT get adopted
+dataset[Quantity == 1 & dataset$y > 1, .N/7684,] #test for the amount of NOT adopted pets that come in group of one.
 
 hist(dataset$Fee,prob=TRUE, main='Fee',xlab = 'Fee',col="grey")
 lines(density(dataset$Fee),col="blue",lwd=2) # This is also problematic. Most are zeroes and then disperesed. We'll probably be best to create a binary variable indicating a fee existed
 
 dataset[Fee == 0 , .N/7684,] # 84.1% of pets in the dataset Don't have adoption fees.
+dataset[Fee <= 100 , .N/7684,]
+
 
 hist(dataset$VideoAmt,prob=T, main='Amount of Videos',xlab = 'Videos',col="grey")
 lines(density(dataset$VideoAmt),col="blue",lwd=2) #Also here, most profiles have 0 videos. Might be better as a binary variable indicating the existent of videos 
 
 dataset[VideoAmt == 0 , .N/7684,] # 96.3% of pets in the dataset have 0 videos in their profiles. 
+dataset[VideoAmt != 0 & dataset$y <=1 , .N/7684,]
+
 
 hist(dataset$PhotoAmt,prob=TRUE, main='Amount of Photos',xlab = 'Videos',col="grey")
 lines(density(dataset$PhotoAmt),col="blue",lwd=2) #This is more interesting. Seems like you usually have 1 picture, but it is rather common to have more. 
+
+
+dataset[PhotoAmt > 1 & dataset$y <2, .N/7684,]
+
+
+dataset[PhotoAmt == 1 , .N/7684,]
+dataset[PhotoAmt == 2 , .N/7684,]
+dataset[PhotoAmt == 3 , .N/7684,]
+dataset[PhotoAmt == 4 , .N/7684,]
+dataset[PhotoAmt == 5 , .N/7684,]
+
+dataset[PhotoAmt != 0 , .N/7684,]
+
 ```
 
 Time for some boxplots. Let's see how valuable are our numeric variables
@@ -87,6 +109,9 @@ Let's make sure we only have NA on secondary variables
 ```{r}
 cleandata %>% names
 cleandata <- dataset
+cleandata[is.na(cleandata),] <- 0  #SWAP ALL NA TO 0
+cleandata <-  cleandata[complete.cases(cleandata), ] #clearrows with NA
+
 cleandata [is.na(Type),.N] # I ran this line of code 20 times, for each variable manually, because I couldn't figure out how to do it more efficiantly. 
 ```
 
