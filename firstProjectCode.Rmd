@@ -107,7 +107,6 @@ boxplot(dataset$PhotoAmt~dataset$y) # It seems more photos are slightly helpful 
 
 Let's make sure we only have NA on secondary variables
 ```{r}
-cleandata %>% names
 cleandata <- dataset
 cleandata[is.na(cleandata),] <- 0  #SWAP ALL NA TO 0
 cleandata <-  cleandata[complete.cases(cleandata), ] #clearrows with NA
@@ -123,22 +122,26 @@ for (i in names(cleandata)) {
 } 
 ```
 
-Creating the new variables from Variables that are currently extremely odd shaped and unhelpful
+Creating the new binary variables from Variables that are currently extremely odd shaped and unhelpful. Also removing old ones.
 ```{r}
 cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
 
 cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
+cleandata[,SingleAdoption := ifelse(Quantity==1,1,0), ]
+cleandata <- cleandata [,-'Fee',]
+cleandata <- cleandata [,-'VideoAmt',]
+cleandata <- cleandata [,-'Quantity',]
 ```
 
 Connections/correlation between variables
 ```{r}
-ggplot(cleandata, aes(y, colour = y)) +  geom_bar()  + ylab('Proportion') + facet_grid(vars(HasFee)) 
-
 cleandata %>% names
 
-mosaicplot(table(cleandata$y,cleandata$Vaccinated), color = T)
+table(cleandata$y,cleandata$HasFee) %>% prop.table
+chisq.test(cleandata$y,cleandata$HasFee)
+
+mosaicplot(table(cleandata$Sterilized,cleandata$Vaccinated,cleandata$Dewormed), color = T, main = 'Sterilized, Vaccinated, Dewormed MosaicPlot')
 mosaicplot(table(cleandata$Sterilized,cleandata$y), color = T)
 
 ```
-
 
