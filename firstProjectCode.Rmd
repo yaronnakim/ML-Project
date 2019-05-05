@@ -22,6 +22,8 @@ ggplot(dataset, aes(Color1)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + 
 ggplot(dataset, aes(Color2)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 ggplot(dataset, aes(Color3)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
+dataset$Breed2 %>% table %>% prop.table()
+
 dataset$MaturitySize %>% table %>% prop.table()
 ggplot(dataset, aes(MaturitySize)) +  geom_bar(aes(y = (..count..)/sum(..count..))) + ylab('Proportion')
 
@@ -128,20 +130,33 @@ cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. 
 
 cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
 cleandata[,SingleAdoption := ifelse(Quantity==1,1,0), ]
+
+cleandata[,isMixed := ifelse(Breed2==0,0,1), ]
+
 cleandata <- cleandata [,-'Fee',]
 cleandata <- cleandata [,-'VideoAmt',]
 cleandata <- cleandata [,-'Quantity',]
+cleandata <- cleandata [,-'Breed2',]
 ```
 
 Connections/correlation between variables
 ```{r}
 cleandata %>% names
 
-table(cleandata$y,cleandata$HasFee) %>% prop.table
+mosaicplot(table(cleandata$Sterilized,cleandata$Vaccinated,cleandata$Dewormed), color = T, main = 'Sterilized, Vaccinated, Dewormed MosaicPlot')
+
+table(cleandata$Gender,cleandata$y) %>% prop.table
 chisq.test(cleandata$y,cleandata$HasFee)
 
-mosaicplot(table(cleandata$Sterilized,cleandata$Vaccinated,cleandata$Dewormed), color = T, main = 'Sterilized, Vaccinated, Dewormed MosaicPlot')
-mosaicplot(table(cleandata$Sterilized,cleandata$y), color = T)
+table(cleandata$MaturitySize,cleandata$y) %>% prop.table
+chisq.test(cleandata$MaturitySize,cleandata$FurLength)
+
+table(cleandata$Gender,cleandata$y) %>% prop.table
+chisq.test(cleandata$y,cleandata$HasFee)
+
+
+table(cleandata$y,cleandata$HasFee) %>% prop.table
+chisq.test(cleandata$Gender,cleandata$y)
 
 ```
 
