@@ -160,3 +160,8 @@ chisq.test(cleandata$Gender,cleandata$y)
 
 ```
 
+discretizing continous variables
+```{r}
+discretize(cleandata$Age, breaks = 7) 
+```
+
