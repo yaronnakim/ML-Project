@@ -3,6 +3,10 @@ library(data.table)
 library(ggplot2)
 library(tidyverse)
 library(MASS)
+library(arules)
+
+install.packages("arules")
+
 "Yoav's Computer Directory"
 dataset <- fread("C:\\Users\\BIGVU\\Documents\\ML Project\\Data.csv")
 
