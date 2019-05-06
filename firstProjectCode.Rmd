@@ -154,14 +154,23 @@ chisq.test(cleandata$MaturitySize,cleandata$FurLength)
 table(cleandata$Gender,cleandata$y) %>% prop.table
 chisq.test(cleandata$y,cleandata$HasFee)
 
-
 table(cleandata$y,cleandata$HasFee) %>% prop.table
 chisq.test(cleandata$Gender,cleandata$y)
 
+table(cleandata$y,cleandata$Health) %>% prop.table
+chisq.test(cleandata$Health,cleandata$y)
+
+table(cleandata$y,discretize(cleandata$PhotoAmt, breaks = 3)) %>% prop.table
+chisq.test(discretize(cleandata$PhotoAmt, breaks = 3),cleandata$y)
+
+table(cleandata$HasVideos,discretize(cleandata$PhotoAmt, breaks = 3)) %>% prop.table
+chisq.test(discretize(cleandata$PhotoAmt, breaks = 3),cleandata$y)
 ```
 
 discretizing continous variables
 ```{r}
 discretize(cleandata$Age, breaks = 7) 
+discretize(cleandata$PhotoAmt, breaks = 3) 
+
 ```
 
