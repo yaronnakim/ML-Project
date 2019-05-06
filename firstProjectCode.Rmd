@@ -94,15 +94,15 @@ dataset[PhotoAmt != 0 , .N/7684,]
 
 Time for some boxplots. Let's see how valuable are our numeric variables
 ```{r}
-boxplot(dataset$Age~dataset$y) # Not extremely helpful. The "not adopted" category is slightly older, but not enough. 
+boxplot(dataset$Age~dataset$y, main = 'Age~Target variable Boxplot') # Not extremely helpful. The "not adopted" category is slightly older, but not enough. 
 
-boxplot(dataset$Quantity~dataset$y) #This is a bad variable, so obviously it is also bad here. In general it seems people are less inclined to adopt pets in groups, which makes sense. 
+boxplot(dataset$Quantity~dataset$y, main = 'Quantity~Target variable Boxplot') #This is a bad variable, so obviously it is also bad here. In general it seems people are less inclined to adopt pets in groups, which makes sense. 
 
 boxplot(dataset$Fee~dataset$y) # Really not helpful. Again, we will turn this into a binary variable and see if that makes a difference. 
 
 boxplot(dataset$VideoAmt~dataset$y) #Same as Fee. 
 
-boxplot(dataset$PhotoAmt~dataset$y) # It seems more photos are slightly helpful for increasing the odds for adoption, but only slightly. 
+boxplot(dataset$PhotoAmt~dataset$y, main = 'PhotoAmt~Target variable Boxplot') # It seems more photos are slightly helpful for increasing the odds for adoption, but only slightly. 
 ```
 
 Let's make sure we only have NA on secondary variables
@@ -234,6 +234,27 @@ cleandata[,PhotoAmt:= sqldf('
   ) AS PhotoAmt
     FROM cleandata
 ')]
+```
+
+Let's see how the new features are working
+```{r}
+table(cleandata$PhotoAmt,cleandata$y) %>% prop.table
+chisq.test(cleandata$PhotoAmt,cleandata$y)
+
+table(cleandata$Age,cleandata$y) %>% prop.table
+chisq.test(cleandata$PhotoAmt,cleandata$y)
+
+table(cleandata$IsPure,cleandata$y) %>% prop.table
+chisq.test(cleandata$IsPure,cleandata$y)
+
+table(cleandata$IsHealthy,cleandata$y) %>% prop.table
+chisq.test(cleandata$IsPure,cleandata$y)
+
+table(cleandata$Treated,cleandata$y) %>% prop.table
+chisq.test(cleandata$Treated,cleandata$y)
+
+table(cleandata$HasVideos,cleandata$y) %>% prop.table
+chisq.test(cleandata$HasVideos,cleandata$y)
 ```
 
 
