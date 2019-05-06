@@ -174,3 +174,27 @@ discretize(cleandata$PhotoAmt, breaks = 3)
 
 ```
 
+
+Splitting the data-set
+```{r}
+
+# Compute sample sizes.
+sampleSizeTraining   <- floor(0.6 * nrow(cleandata))
+sampleSizeValidation <- floor(0.2 * nrow(cleandata))
+sampleSizeTest       <- floor(0.2 * nrow(cleandata))
+
+# Create the randomly-sampled indices for the dataframe. Use setdiff() to
+# avoid overlapping subsets of indices.
+indicesTraining    <- sort(sample(seq_len(nrow(cleandata)), size=sampleSizeTraining))
+indicesNotTraining <- setdiff(seq_len(nrow(cleandata)), indicesTraining)
+indicesValidation  <- sort(sample(indicesNotTraining, size=sampleSizeValidation))
+indicesTest        <- setdiff(indicesNotTraining, indicesValidation)
+
+# Finally, output the three dataframes for training, validation and test.
+cleandataTraining   <- cleandata[indicesTraining, ]
+cleandataValidation <- cleandata[indicesValidation, ]
+cleandataTest       <- cleandata[indicesTest, ]
+
+table(cleandataTraining$y) %>% prop.table()
+```
+
