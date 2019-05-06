@@ -4,6 +4,7 @@ library(ggplot2)
 library(tidyverse)
 library(MASS)
 library(arules)
+library(sqldf)
 
 install.packages("arules")
 
