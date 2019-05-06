@@ -148,17 +148,19 @@ cleandata[,Treated:= sqldf('
   ) AS Treated
     FROM cleandata
 ')]
-cleandata <- cleandata [,-'IsHealth',]
+
+# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
+cleandata[,IsPure := ifelse(dataset$Breed1 ==307,0,1), ]
+# transpose health lable to binary values: 1 = healthy, 0 = not
+cleandata[,IsHealthy := ifelse(Health ==1,1,0), ]
+
 cleandata <- cleandata [,-'Health',]
 cleandata <- cleandata [,-'Breed1',]
 cleandata <- cleandata [,-'Vaccinated',]
 cleandata <- cleandata [,-'Dewormed',]
 cleandata <- cleandata [,-'Sterilized',]
 
-# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
-cleandata[,IsPure := ifelse(dataset$Breed1 ==307,0,1), ]
-# transpose health lable to binary values: 1 = healthy, 0 = not
-cleandata[,IsHealthy := ifelse(Health ==1,1,0), ]
+
 
 cleandata[,State:= sqldf('
   SELECT (CASE
