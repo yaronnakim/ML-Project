@@ -82,8 +82,6 @@ lines(density(dataset$PhotoAmt),col="blue",lwd=2) #This is more interesting. See
 
 
 dataset[PhotoAmt > 1 & dataset$y <2, .N/7684,]
-
-
 dataset[PhotoAmt == 1 , .N/7684,]
 dataset[PhotoAmt == 2 , .N/7684,]
 dataset[PhotoAmt == 3 , .N/7684,]
@@ -111,7 +109,7 @@ Let's make sure we only have NA on secondary variables
 ```{r}
 cleandata <- dataset
 cleandata[is.na(cleandata),] <- 0  #SWAP ALL NA TO 0
-cleandata <-  cleandata[complete.cases(cleandata), ] #clearrows with NA
+# cleandata <-  cleandata[complete.cases(cleandata), ] #clearrows with NA
 
 cleandata [is.na(Type),.N] # I ran this line of code 20 times, for each variable manually, because I couldn't figure out how to do it more efficiantly. 
 ```
@@ -131,12 +129,48 @@ cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. 
 cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
 cleandata[,SingleAdoption := ifelse(Quantity==1,1,0), ]
 
-cleandata[,isMixed := ifelse(Breed2==0,0,1), ]
+# cleandata[,isPure := ifelse(Breed2==0,0,1), ]
 
 cleandata <- cleandata [,-'Fee',]
 cleandata <- cleandata [,-'VideoAmt',]
 cleandata <- cleandata [,-'Quantity',]
 cleandata <- cleandata [,-'Breed2',]
+cleandata <- cleandata [,-'Color2',]
+cleandata <- cleandata [,-'Color3',]
+
+# marge 3 colums on health condition into new veriable: 1= Treated, 2= semi treated, 3= not treated
+cleandata[,Treated:= sqldf('
+  SELECT (CASE
+  WHEN Vaccinated = 1 AND Dewormed = 1 AND Sterilized = 1 THEN 1
+  WHEN Vaccinated = 1 OR Dewormed = 1 OR Sterilized = 1 THEN 2
+  ELSE 3
+  END
+  ) AS Treated
+    FROM cleandata
+')]
+cleandata <- cleandata [,-'IsHealth',]
+cleandata <- cleandata [,-'Health',]
+cleandata <- cleandata [,-'Breed1',]
+cleandata <- cleandata [,-'Vaccinated',]
+cleandata <- cleandata [,-'Dewormed',]
+cleandata <- cleandata [,-'Sterilized',]
+
+# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
+cleandata[,IsPure := ifelse(dataset$Breed1 ==307,0,1), ]
+# transpose health lable to binary values: 1 = healthy, 0 = not
+cleandata[,IsHealthy := ifelse(Health ==1,1,0), ]
+
+cleandata[,State:= sqldf('
+  SELECT (CASE
+  WHEN State = 41326 THEN 1
+  WHEN State = 41401 THEN 2
+  ELSE 0
+  END
+  ) AS State
+    FROM cleandata
+')]
+
+
 ```
 
 Connections/correlation between variables
@@ -170,8 +204,34 @@ chisq.test(discretize(cleandata$PhotoAmt, breaks = 3),cleandata$y)
 discretizing continous variables
 ```{r}
 discretize(cleandata$Age, breaks = 7) 
-discretize(cleandata$PhotoAmt, breaks = 3) 
+# tanspose age valuse to categorial bin according to discretize function
+cleandata[,Age:= sqldf('
+  SELECT (CASE
+  WHEN Age < 1  THEN 1
+  WHEN Age < 2 AND Age >=1  THEN 2
+  WHEN Age < 3 AND Age >=2  THEN 3
+  WHEN Age < 5 AND Age >=3  THEN 4
+  WHEN Age < 11 AND Age >=5  THEN 5
+  WHEN Age < 24 AND Age >=11  THEN 6
+  ELSE 7
+  END
+  ) AS Age
+    FROM cleandata
+')]
 
+
+discretize(cleandata$PhotoAmt, breaks = 3) 
+# tanspose age valuse to categorial bin according to discretize function
+cleandata[,PhotoAmt:= sqldf('
+  SELECT (CASE
+  WHEN PhotoAmt = 0  THEN 0
+  WHEN PhotoAmt < 2 AND Age >0  THEN 1
+  WHEN PhotoAmt < 4 AND Age >=2  THEN 2
+  ELSE 3
+  END
+  ) AS PhotoAmt
+    FROM cleandata
+')]
 ```
 
 
