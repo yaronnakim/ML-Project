@@ -1,0 +1,122 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+
+Stuff from the first Project that are needed here:
+
+
+Creating the new binary variables from Variables that are currently extremely odd shaped and unhelpful. Also removing old ones. You can simply press on "Run" before starting to work. 
+```{r}
+cleandata <- dataset
+for (i in names(cleandata)) {
+  cleandata[is.na(get(i)), (i):=0] 
+} 
+cleandata[,HasFee := ifelse(Fee>0,1,-1), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
+
+cleandata[,HasVideos := ifelse(VideoAmt>0,1,-1), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
+cleandata[,SingleAdoption := ifelse(Quantity==1,1,-1), ]
+
+
+# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
+cleandata[,IsPure := ifelse(dataset$Breed1 ==307,-1,1), ]
+# transpose health lable to binary values: 1 = healthy, 0 = not
+cleandata[,IsHealthy := ifelse(Health ==1,1,-1), ]
+
+# marge 3 colums on health condition into new veriable: 1= Treated, 2= semi treated, 3= not treated
+cleandata[,Treated:= sqldf('
+  SELECT (CASE
+  WHEN Vaccinated = 1 AND Dewormed = 1 AND Sterilized = 1 THEN 1
+  WHEN Vaccinated = 1 OR Dewormed = 1 OR Sterilized = 1 THEN 2
+  ELSE 3
+  END
+  ) AS Treated
+    FROM cleandata
+')]
+
+cleandata[,State:= sqldf('
+  SELECT (CASE
+  WHEN State = 41326 THEN 1
+  WHEN State = 41401 THEN 2
+  ELSE 0
+  END
+  ) AS State
+    FROM cleandata
+')]
+
+#discretizing continous variables:
+# tanspose age valuse to categorial bin according to discretize function
+cleandata[,Age:= sqldf('
+  SELECT (CASE
+  WHEN Age < 1  THEN 1
+  WHEN Age < 2 AND Age >=1  THEN 2
+  WHEN Age < 3 AND Age >=2  THEN 3
+  WHEN Age < 5 AND Age >=3  THEN 4
+  WHEN Age < 11 AND Age >=5  THEN 5
+  WHEN Age < 24 AND Age >=11  THEN 6
+  ELSE 7
+  END
+  ) AS Age
+    FROM cleandata
+')]
+
+
+# tanspose age valuse to categorial bin according to discretize function
+cleandata[,PhotoAmt:= sqldf('
+  SELECT (CASE
+  WHEN PhotoAmt = 0  THEN 0
+  WHEN PhotoAmt < 2 AND Age >0  THEN 1
+  WHEN PhotoAmt < 4 AND Age >=2  THEN 2
+  ELSE 3
+  END
+  ) AS PhotoAmt
+    FROM cleandata
+')]
+
+cleandata <- cleandata [,-'Fee',]
+cleandata <- cleandata [,-'VideoAmt',]
+cleandata <- cleandata [,-'Quantity',]
+cleandata <- cleandata [,-'Breed2',]
+cleandata <- cleandata [,-'Color2',]
+cleandata <- cleandata [,-'Color3',]
+
+
+
+
+cleandata <- cleandata [,-'Health',]
+cleandata <- cleandata [,-'Breed1',]
+cleandata <- cleandata [,-'Vaccinated',]
+cleandata <- cleandata [,-'Dewormed',]
+cleandata <- cleandata [,-'Sterilized',]
+
+cleandata[,Ftreat:=ifelse(Treated==1,1,-1),]
+cleandata[,Ptreat:=ifelse(Treated==2,1,-1),]
+
+cleandata <- cleandata [,-'Treated',]
+```
+
+Let's create a Train Test split.
+```{r}
+Indices <- sample(c(TRUE,FALSE),
+       size = nrow(cleandata),
+       prob = c(0.8,0.2),
+       replace = TRUE)
+
+train.data <- cleandata[Indices,]
+test.data <- cleandata[!Indices,]
+```
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
