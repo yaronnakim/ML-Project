@@ -100,6 +100,9 @@ cleandata[,Ftreat:=ifelse(Treated==1,1,-1),]
 cleandata[,Ptreat:=ifelse(Treated==2,1,-1),]
 
 cleandata <- cleandata [,-'Treated',]
+
+cleandata[,dog:=ifelse(Type==1,1,-1),]
+cleandata <- cleandata [,-'Type',]
 ```
 
 Let's create a Train Test split.
@@ -111,6 +114,35 @@ Indices <- sample(c(TRUE,FALSE),
 
 train.data <- cleandata[Indices,]
 test.data <- cleandata[!Indices,]
+```
+
+Function to determine how good our models are:
+```{r}
+missclasification <- function(ytab) sum(ytab[c(2,3,4,6,7,8)]/sum(ytab)) 
+```
+
+
+
+Let's play around with trees 
+```{r}
+?rpart
+FirstTree <- rpart(y~.,data=train.data, method = 'class')
+(confusion <- table(Predicted = predict(FirstTree, type = 'class'), true = train.data$y))
+missclasification(confusion)
+
+(conf.test <- table(predicted = predict(FirstTree, newdata=test.data, type = 'class'), Truth = test.data$y))
+missclasification(conf.test)
+
+printcp(FirstTree)
+PrunedTree <- prune(FirstTree, cp = 0.018070)
+plot(PrunedTree)
+plotcp(PrunedTree)
+
+(confusion <- table(Predicted = predict(PrunedTree, type = 'class'), true = train.data$y))
+missclasification(confusion)
+
+(conf.test <- table(predicted = predict(PrunedTree, newdata=test.data, type = 'class'), Truth = test.data$y))
+missclasification(conf.test)
 ```
 
 
