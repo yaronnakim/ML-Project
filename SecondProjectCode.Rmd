@@ -13,7 +13,7 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 Stuff from the first Project that are needed here:
 
 
-Preparing data
+Preparing data for neural net
 ```{r}
 cleandata <- dataset
 for (i in names(cleandata)) {
@@ -105,6 +105,43 @@ cleandata[,dog:=ifelse(Type==1,1,-1),]
 cleandata <- cleandata [,-'Type',]
 ```
 
+Preparing data for Trees
+```{r}
+cleandata <- dataset
+cleandata[,HasFee := ifelse(Fee>0,1,0), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
+
+cleandata[,HasVideos := ifelse(VideoAmt>0,1,0), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
+cleandata[,SingleAdoption := ifelse(Quantity==1,1,0), ]
+
+
+# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
+cleandata[,IsPure := ifelse(dataset$Breed1 ==307,0,1), ]
+# transpose health lable to binary values: 1 = healthy, 0 = not
+cleandata[,IsHealthy := ifelse(Health ==1,1,0), ]
+
+
+cleandata[,State:= sqldf('
+  SELECT (CASE
+  WHEN State = 41326 THEN 1
+  WHEN State = 41401 THEN 2
+  ELSE 0
+  END
+  ) AS State
+    FROM cleandata
+')]
+
+
+cleandata <- cleandata [,-'Breed2',]
+cleandata <- cleandata [,-'Color2',]
+cleandata <- cleandata [,-'Color3',]
+cleandata <- cleandata [,-'Health',]
+cleandata <- cleandata [,-'Breed1',]
+
+
+cleandata[,dog:=ifelse(Type==1,1,0),]
+cleandata <- cleandata [,-'Type',]
+```
+
 
 
 
@@ -130,15 +167,16 @@ Let's play around with trees
 ```{r}
 ?rpart
 proportions <-  train.data$y %>% table %>% prop.table()
-FirstTree <- rpart(y~.,data=train.data, method = 'class',parms = list(prior = proportions))
+FirstTree <- rpart(factor(y)~.,data=train.data, method = 'class')
 (confusion <- table(Predicted = predict(FirstTree, type = 'class'), true = train.data$y))
 missclasification(confusion)
 
 (conf.test <- table(predicted = predict(FirstTree, newdata=test.data, type = 'class'), Truth = test.data$y))
 missclasification(conf.test)
 printcp(FirstTree)
-PrunedTree <- prune(FirstTree, cp = 0.010000)
+PrunedTree <- prune(FirstTree, cp = 0.018305)
 rpart.plot(FirstTree)
+rpart.plot(PrunedTree)
 plotcp(PrunedTree)
 
 
@@ -147,15 +185,12 @@ missclasification(confusion)
 
 (conf.test <- table(predicted = predict(PrunedTree, newdata=test.data, type = 'class'), Truth = test.data$y))
 missclasification(conf.test)
-```
 
-```{r}
-Practice.Tree <- rpart(y~.,dataset)
-(confusion <- table(Predicted = predict(Practice.Tree, type = 'class'), true = dataset$y))
-missclasification(confusion)
+caret::varImp(FirstTree)
 
 
 ```
+
 
 
 

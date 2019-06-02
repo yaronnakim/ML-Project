@@ -5,7 +5,8 @@ library(tidyverse)
 library(MASS)
 library(arules)
 library(sqldf)
-
+library(rpart)
+library(rpart.plot)
 "Yoav's Computer Directory"
 dataset <- fread("C:\\Users\\BIGVU\\Documents\\ML Project\\Data.csv")
 
