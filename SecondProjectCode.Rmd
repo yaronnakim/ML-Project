@@ -13,7 +13,7 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 Stuff from the first Project that are needed here:
 
 
-Creating the new binary variables from Variables that are currently extremely odd shaped and unhelpful. Also removing old ones. You can simply press on "Run" before starting to work. 
+Preparing data
 ```{r}
 cleandata <- dataset
 for (i in names(cleandata)) {
@@ -105,6 +105,9 @@ cleandata[,dog:=ifelse(Type==1,1,-1),]
 cleandata <- cleandata [,-'Type',]
 ```
 
+
+
+
 Let's create a Train Test split.
 ```{r}
 Indices <- sample(c(TRUE,FALSE),
@@ -126,23 +129,32 @@ missclasification <- function(ytab) sum(ytab[c(2,3,4,6,7,8)]/sum(ytab))
 Let's play around with trees 
 ```{r}
 ?rpart
-FirstTree <- rpart(y~.,data=train.data, method = 'class')
+proportions <-  train.data$y %>% table %>% prop.table()
+FirstTree <- rpart(y~.,data=train.data, method = 'class',parms = list(prior = proportions))
 (confusion <- table(Predicted = predict(FirstTree, type = 'class'), true = train.data$y))
 missclasification(confusion)
 
 (conf.test <- table(predicted = predict(FirstTree, newdata=test.data, type = 'class'), Truth = test.data$y))
 missclasification(conf.test)
-
 printcp(FirstTree)
-PrunedTree <- prune(FirstTree, cp = 0.018070)
-plot(PrunedTree)
+PrunedTree <- prune(FirstTree, cp = 0.010000)
+rpart.plot(FirstTree)
 plotcp(PrunedTree)
+
 
 (confusion <- table(Predicted = predict(PrunedTree, type = 'class'), true = train.data$y))
 missclasification(confusion)
 
 (conf.test <- table(predicted = predict(PrunedTree, newdata=test.data, type = 'class'), Truth = test.data$y))
 missclasification(conf.test)
+```
+
+```{r}
+Practice.Tree <- rpart(y~.,dataset)
+(confusion <- table(Predicted = predict(Practice.Tree, type = 'class'), true = dataset$y))
+missclasification(confusion)
+
+
 ```
 
 
