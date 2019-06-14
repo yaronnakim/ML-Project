@@ -31,15 +31,32 @@ cleandata[,IsPure := ifelse(dataset$Breed1 ==307,-1,1), ]
 cleandata[,IsHealthy := ifelse(Health ==1,1,-1), ]
 
 # marge 3 colums on health condition into new veriable: 1= Treated, 2= semi treated, 3= not treated
-cleandata[,Treated:= sqldf('
+#cleandata[,Treated:= sqldf('
+ # SELECT (CASE
+  #WHEN Vaccinated = 1 AND Dewormed = 1 AND Sterilized = 1 THEN 1
+#  WHEN Vaccinated = 1 OR Dewormed = 1 OR Sterilized = 1 THEN 2
+#  ELSE 3
+ # END
+  #) AS Treated
+  #  FROM cleandata
+#')]
+cleandata[,SterilizedUnknown:= sqldf('
   SELECT (CASE
-  WHEN Vaccinated = 1 AND Dewormed = 1 AND Sterilized = 1 THEN 1
-  WHEN Vaccinated = 1 OR Dewormed = 1 OR Sterilized = 1 THEN 2
-  ELSE 3
+  WHEN Sterilized = 3 THEN 1
+  ELSE -1
   END
-  ) AS Treated
+  ) AS SteriliezedUnknown
     FROM cleandata
 ')]
+cleandata[,NotSterilized:= sqldf('
+  SELECT (CASE
+  WHEN Sterilized = 2 THEN 1
+  ELSE -1
+  END
+  ) AS SteriliezedUnknown
+    FROM cleandata
+')]
+cleandata <- cleandata[,-'Sterilized']
 
 cleandata[,State:= sqldf('
   SELECT (CASE
@@ -50,6 +67,28 @@ cleandata[,State:= sqldf('
   ) AS State
     FROM cleandata
 ')]
+cleandata[,Selangor:= sqldf('
+  SELECT (CASE
+  WHEN State = 1 THEN 1
+  ELSE -1
+  END
+  ) AS Selangor
+    FROM cleandata
+')]
+cleandata[,KualaLumpur
+:= sqldf('
+  SELECT (CASE
+  WHEN State = 2 THEN 1
+  ELSE -1
+  END
+  ) AS KualaLumpur
+
+    FROM cleandata
+')]
+
+cleandata <- cleandata [,-'State',]
+
+
 
 #discretizing continous variables:
 # tanspose age valuse to categorial bin according to discretize function
@@ -94,15 +133,20 @@ cleandata <- cleandata [,-'Health',]
 cleandata <- cleandata [,-'Breed1',]
 cleandata <- cleandata [,-'Vaccinated',]
 cleandata <- cleandata [,-'Dewormed',]
-cleandata <- cleandata [,-'Sterilized',]
 
-cleandata[,Ftreat:=ifelse(Treated==1,1,-1),]
-cleandata[,Ptreat:=ifelse(Treated==2,1,-1),]
+#cleandata[,Ftreat:=ifelse(Treated==1,1,-1),]
+#cleandata[,Ptreat:=ifelse(Treated==2,1,-1),]
 
-cleandata <- cleandata [,-'Treated',]
+#cleandata <- cleandata [,-'Treated',]
 
 cleandata[,dog:=ifelse(Type==1,1,-1),]
 cleandata <- cleandata [,-'Type',]
+
+cleandata[,Male:=ifelse(Gender==1,1,-1),]
+cleandata <- cleandata [,-'Gender',]
+
+cleandata <- cleandata [,-'Color1',] #Perhaps we should do something with this instead of deleting it.
+
 ```
 
 Preparing data for Trees
@@ -130,6 +174,31 @@ cleandata[,State:= sqldf('
     FROM cleandata
 ')]
 
+cleandata[,Age:= sqldf('
+  SELECT (CASE
+  WHEN Age < 1  THEN 1
+  WHEN Age < 2 AND Age >=1  THEN 2
+  WHEN Age < 3 AND Age >=2  THEN 3
+  WHEN Age < 5 AND Age >=3  THEN 4
+  WHEN Age < 11 AND Age >=5  THEN 5
+  WHEN Age < 24 AND Age >=11  THEN 6
+  ELSE 7
+  END
+  ) AS Age
+    FROM cleandata
+')]
+
+cleandata[,PhotoAmt:= sqldf('
+  SELECT (CASE
+  WHEN PhotoAmt = 0  THEN 0
+  WHEN PhotoAmt < 2 AND Age >0  THEN 1
+  WHEN PhotoAmt < 4 AND Age >=2  THEN 2
+  ELSE 3
+  END
+  ) AS PhotoAmt
+    FROM cleandata
+')]
+
 
 cleandata <- cleandata [,-'Breed2',]
 cleandata <- cleandata [,-'Color2',]
@@ -147,38 +216,137 @@ cleandata <- cleandata [,-'Type',]
 
 Let's create a Train Test split.
 ```{r}
-Indices <- sample(c(TRUE,FALSE),
+Indices <- sample(c(1:3),
        size = nrow(cleandata),
-       prob = c(0.8,0.2),
+       prob = c(0.7,0.15,0.15),
        replace = TRUE)
 
-train.data <- cleandata[Indices,]
-test.data <- cleandata[!Indices,]
+train.data <- cleandata[Indices == 1,]
+validation.data <- cleandata[Indices == 2,]
+test.data <- cleandata[Indices==3,]
 ```
 
 Function to determine how good our models are:
 ```{r}
 missclasification <- function(ytab) sum(ytab[c(2,3,4,6,7,8)]/sum(ytab)) 
+Accuracy <- function(ytab) sum(ytab[c(1,5,9)]/sum(ytab)) 
+stupidAccuracy <- function(ytab) sum(ytab[c(3,6)]/sum(ytab)) 
 ```
 
 
+Let's play with neural nets
+```{r}
+nn1 <- nnet(factor(y)~.,data = train.data, size = 3, maxit = 300, decay = 0.01)
+
+(confusion <-  table(Predicted = predict(nn1, type = "class"), true = train.data$y))
+Accuracy(confusion)
+
+(conf.val <- table(predicted = predict(nn1, newdata=validation.data, type = 'class'), Truth = validation.data$y))
+Accuracy(conf.val)
+
+nn2 <-  nnet(factor(y)~.,data = train.data, size = 3, maxit = 400, decay = 0.001)
+
+(confusion <-  table(Predicted = predict(nn2, type = "class"), true = train.data$y))
+stupidAccuracy(confusion)
+
+(conf.val <- table(predicted = predict(nn2, newdata=validation.data, type = 'class'), Truth = validation.data$y))
+stupidAccuracy(conf.val)
+
+nn3 <-  nnet(factor(y)~.,data = train.data, size = 9, maxit = 300, decay = 0.0001)
+
+(confusion <-  table(Predicted = predict(nn3, type = "class"), true = train.data$y))
+Accuracy(confusion)
+
+(conf.val <- table(predicted = predict(nn3, newdata=validation.data, type = 'class'), Truth = validation.data$y))
+Accuracy(conf.val)
+
+
+plotnet(nn1)
+plotnet(nn2)
+plotnet(nn3)
+
+(conf.test <- table(predicted = predict(nn1, newdata=test.data, type = 'class'), Truth = test.data$y))
+stupidAccuracy(conf.test)
+
+(conf.test <- table(predicted = predict(nn2, newdata=test.data, type = 'class'), Truth = test.data$y))
+stupidAccuracy(conf.test)
+
+(conf.test <- table(predicted = predict(nn3, newdata=test.data, type = 'class'), Truth = test.data$y))
+Accuracy(conf.test)
+
+```
+
+```{r}
+val.errors <- NULL
+train.errors <- NULL
+for (i in 1:16) {
+    nn1 <- nnet(factor(y)~.,data = train.data, size = i, trace = F, maxit = 300)
+    
+    .confusion.train <- table(Predicted = predict(nn1, type = "class"), true = train.data$y)
+    .confusion.val <- table(Predicted = predict(nn1, newdata=validation.data, type = 'class'), Truth = validation.data$y)
+    if ((.confusion.train %>% dim)[1] == 2){
+    train.errors <- c(train.errors,stupidAccuracy(.confusion.train)) # train errors
+    
+    } else {
+    train.errors <- c(train.errors,Accuracy(.confusion.train))# train errors
+    
+    }
+    if ((.confusion.val %>% dim)[1] == 2){
+    val.errors <- c(val.errors,stupidAccuracy(.confusion.val)) # val errors
+    } else {
+    val.errors <- c(val.errors,Accuracy(.confusion.val)) # val errors
+}
+}
+```
+
+Plotting results.
+```{r, cache=TRUE, dependson="all subsets second"}
+plot(train.errors, ylab = "Accuracy",xlab = 'Number of hidden units', pch = 19, type = "o", ylim = c(0.6,0.7))
+points(val.errors, pch = 19, type = "b", col="blue")
+legend("topleft", 
+       legend = c("Training", "Validation"), 
+       col = c("black", "blue"), 
+       pch = 19)
+```
+```
 
 Let's play around with trees 
 ```{r}
-?rpart
+
 proportions <-  train.data$y %>% table %>% prop.table()
-FirstTree <- rpart(factor(y)~.,data=train.data, method = 'class')
+FirstTree <- rpart(y~.,data=train.data, method = 'class')
 (confusion <- table(Predicted = predict(FirstTree, type = 'class'), true = train.data$y))
 missclasification(confusion)
 
 (conf.test <- table(predicted = predict(FirstTree, newdata=test.data, type = 'class'), Truth = test.data$y))
 missclasification(conf.test)
-printcp(FirstTree)
-PrunedTree <- prune(FirstTree, cp = 0.018305)
-rpart.plot(FirstTree)
-rpart.plot(PrunedTree)
-plotcp(PrunedTree)
 
+(conf.test <- table(predicted = predict(FirstTree, newdata=test.data, type = 'class'), Truth = test.data$y))
+missclasification(conf.test)
+printcp(FirstTree)
+PrunedTree <- prune(FirstTree, cp = 0.010000)
+PrunedTree0 <- prune(FirstTree, cp = 0)
+PrunedTreeBad <- prune(FirstTree, cp = 0.163661)
+PrunedTreeMid <- prune(FirstTree, cp = 0.023477)
+rpart.plot(FirstTree)
+rpart.plot(PrunedTreeBad)
+rpart.plot(PrunedTree)
+rpart.plot(PrunedTreeMid)
+
+plotcp(PrunedTree)
+plotcp(FirstTree)
+
+(confusion <- table(Predicted = predict(PrunedTreeBad, type = 'class'), true = train.data$y))
+missclasification(confusion)
+
+(conf.test <- table(predicted = predict(PrunedTreeBad, newdata=test.data, type = 'class'), Truth = test.data$y))
+missclasification(conf.test)
+
+(confusion <- table(Predicted = predict(PrunedTreeMid, type = 'class'), true = train.data$y))
+missclasification(confusion)
+
+(conf.test <- table(predicted = predict(PrunedTreeMid, newdata=test.data, type = 'class'), Truth = test.data$y))
+missclasification(conf.test)
 
 (confusion <- table(Predicted = predict(PrunedTree, type = 'class'), true = train.data$y))
 missclasification(confusion)
