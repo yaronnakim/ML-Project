@@ -16,7 +16,7 @@ Stuff from the first Project that are needed here:
 Preparing data for neural net
 ```{r}
 cleandata <- dataset
-for (i in names(cleandata)) {
+#for (i in names(cleandata)) {
   cleandata[is.na(get(i)), (i):=0] 
 } 
 cleandata[,HasFee := ifelse(Fee>0,1,-1), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
@@ -252,6 +252,10 @@ stupidAccuracy(confusion)
 (conf.val <- table(predicted = predict(nn2, newdata=validation.data, type = 'class'), Truth = validation.data$y))
 stupidAccuracy(conf.val)
 
+
+(conf.test <- table(predicted = predict(nn2, newdata=test.data, type = 'class'), Truth = test.data$y))
+stupidAccuracy(conf.test)
+
 nn3 <-  nnet(factor(y)~.,data = train.data, size = 9, maxit = 300, decay = 0.0001)
 
 (confusion <-  table(Predicted = predict(nn3, type = "class"), true = train.data$y))
@@ -308,11 +312,11 @@ legend("topleft",
        col = c("black", "blue"), 
        pch = 19)
 ```
-```
+
 
 Let's play around with trees 
 ```{r}
-
+ 
 proportions <-  train.data$y %>% table %>% prop.table()
 FirstTree <- rpart(y~.,data=train.data, method = 'class')
 (confusion <- table(Predicted = predict(FirstTree, type = 'class'), true = train.data$y))
@@ -360,6 +364,180 @@ caret::varImp(FirstTree)
 ```
 
 
+
+K-Means time
+```{r}
+unsuper = cleandata[,-"y"]
+clusters = kmeans(unsuper, 3)
+unsuper$clust <- clusters$cluster
+unsuper$real <- cleandata$y
+comp$clust %>% table
+comp <- cleandata
+comp$clust <- clusters$cluster
+comp[,clustry:= sqldf('
+  SELECT (CASE
+  WHEN clust = 3  THEN 0
+  WHEN clust = 1  THEN 1
+  ELSE 2
+  END
+  ) AS clustry
+    FROM comp
+')]
+(conf.test <- table(predicted = comp$clustry, Truth = comp$y))
+Accuracy(conf.test)
+
+clusters$withinss
+
+clusplot(unsuper, clusters$cluster, color=TRUE, shade=TRUE, 
+         labels=2)
+plotcluster(unsuper, clusters$cluster)
+plot(comp$PhotoAmt, comp$Age, colour = clusters$cluster)
+
+fviz_nbclust(unsuper, kmeans, method = "wss", k.max = 10) + theme_minimal() + ggtitle("the Elbow Method")
+
+```
+
+Preparing test variables for prediction
+```{r}
+ 
+test[,HasFee := ifelse(Fee>0,1,-1), ] #84% of pets don't have adoption fee. In order for the those who have fees those who have fees to become a meaningful group we are turning this Binary
+
+test[,HasVideos := ifelse(VideoAmt>0,1,-1), ] #96% of pets don't have videos on their profiles. This is why it is more interesting to ask if having videos at all make any difference, hence we turn this Binary as well. 
+test[,SingleAdoption := ifelse(Quantity==1,1,-1), ]
+
+# tranpose breed lable to binari values:  0 = mixed, 1 = pedigree
+test[,IsPure := ifelse(dataset$Breed1 ==307,-1,1), ]
+# transpose health lable to binary values: 1 = healthy, 0 = not
+test[,IsHealthy := ifelse(Health ==1,1,-1), ]
+
+# marge 3 colums on health condition into new veriable: 1= Treated, 2= semi treated, 3= not treated
+#cleandata[,Treated:= sqldf('
+ # SELECT (CASE
+  #WHEN Vaccinated = 1 AND Dewormed = 1 AND Sterilized = 1 THEN 1
+#  WHEN Vaccinated = 1 OR Dewormed = 1 OR Sterilized = 1 THEN 2
+#  ELSE 3
+ # END
+  #) AS Treated
+  #  FROM cleandata
+#')]
+test[,SterilizedUnknown:= sqldf('
+  SELECT (CASE
+  WHEN Sterilized = 3 THEN 1
+  ELSE -1
+  END
+  ) AS SteriliezedUnknown
+    FROM test
+')]
+test[,NotSterilized:= sqldf('
+  SELECT (CASE
+  WHEN Sterilized = 2 THEN 1
+  ELSE -1
+  END
+  ) AS SteriliezedUnknown
+    FROM test
+')]
+test <- test[,-'Sterilized']
+
+test[,State:= sqldf('
+  SELECT (CASE
+  WHEN State = 41326 THEN 1
+  WHEN State = 41401 THEN 2
+  ELSE 0
+  END
+  ) AS State
+    FROM test
+')]
+test[,Selangor:= sqldf('
+  SELECT (CASE
+  WHEN State = 1 THEN 1
+  ELSE -1
+  END
+  ) AS Selangor
+    FROM test
+')]
+test[,KualaLumpur
+:= sqldf('
+  SELECT (CASE
+  WHEN State = 2 THEN 1
+  ELSE -1
+  END
+  ) AS KualaLumpur
+
+    FROM test
+')]
+
+test <- test [,-'State',]
+
+
+
+#discretizing continous variables:
+# tanspose age valuse to categorial bin according to discretize function
+test[,Age:= sqldf('
+  SELECT (CASE
+  WHEN Age < 1  THEN 1
+  WHEN Age < 2 AND Age >=1  THEN 2
+  WHEN Age < 3 AND Age >=2  THEN 3
+  WHEN Age < 5 AND Age >=3  THEN 4
+  WHEN Age < 11 AND Age >=5  THEN 5
+  WHEN Age < 24 AND Age >=11  THEN 6
+  ELSE 7
+  END
+  ) AS Age
+    FROM test
+')]
+
+
+# tanspose age valuse to categorial bin according to discretize function
+test[,PhotoAmt:= sqldf('
+  SELECT (CASE
+  WHEN PhotoAmt = 0  THEN 0
+  WHEN PhotoAmt < 2 AND Age >0  THEN 1
+  WHEN PhotoAmt < 4 AND Age >=2  THEN 2
+  ELSE 3
+  END
+  ) AS PhotoAmt
+    FROM test
+')]
+
+test <- test [,-'Fee',]
+test <- test [,-'VideoAmt',]
+test <- test [,-'Quantity',]
+test <- test [,-'Breed2',]
+test <- test [,-'Color2',]
+test <- test [,-'Color3',]
+
+
+
+
+test <- test [,-'Health',]
+test <- test [,-'Breed1',]
+test <- test [,-'Vaccinated',]
+test <- test [,-'Dewormed',]
+
+#cleandata[,Ftreat:=ifelse(Treated==1,1,-1),]
+#cleandata[,Ptreat:=ifelse(Treated==2,1,-1),]
+
+#cleandata <- cleandata [,-'Treated',]
+
+test[,dog:=ifelse(Type==1,1,-1),]
+test <- test [,-'Type',]
+
+test[,Male:=ifelse(Gender==1,1,-1),]
+test <- test [,-'Gender',]
+
+test <- test [,-'Color1',] #Perhaps we should do something with this instead of deleting it.
+
+```
+
+
+Making the Predictions:
+```{r}
+Y <- as.data.table(predict(nn2, newdata = test, type = "class"))
+Y[,y:=V1]
+Y <- Y[,-'V1']
+
+fwrite(Y, "Y_Final.csv")
+```
 
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.

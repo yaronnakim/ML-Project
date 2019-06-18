@@ -7,8 +7,15 @@ library(arules)
 library(sqldf)
 library(rpart)
 library(rpart.plot)
+library(cluster)
+library(fpc)
+library(clustree)
+library(factoextra)
+library(nnet)
+library(NeuralNetTools)
 "Yoav's Computer Directory"
 dataset <- fread("C:\\Users\\BIGVU\\Documents\\ML Project\\Data.csv")
+test <- fread("C:\\Users\\BIGVU\\Documents\\ML Project\\Test.csv")
 
 "Yaron's Computer Directory"
 dataset <-  fread("C:\\Users\\Yaron\\Desktop\\working proccess\\Academy\\5\\ML\\projectML\\Data.csv")
